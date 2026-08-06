@@ -45,8 +45,8 @@ def test_compose_kb_commands_are_registered():
     kb_commands = _registered_kb_commands()
     for name, svc in _compose_services().items():
         cmd = svc.get("command")
-        if isinstance(cmd, list) and cmd and cmd[0] == "kb":
-            assert cmd[1] in kb_commands, f"{name} calls unknown kb command: {cmd[1]}"
+        if isinstance(cmd, list) and cmd and cmd[0] == "srag":
+            assert cmd[1] in kb_commands, f"{name} calls unknown srag command: {cmd[1]}"
 
 
 def test_compose_services_do_not_collide_on_ports():
