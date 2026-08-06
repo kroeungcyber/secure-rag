@@ -49,7 +49,7 @@ def test_disabled_audit_is_noop(tmp_path, monkeypatch):
 
 
 def test_web_query_logs_query_event(tmp_path, monkeypatch, mocker):
-    monkeypatch.setenv("ITKB_SILENT", "1")
+    monkeypatch.setenv("SRAG_SILENT", "1")
     _tmp_cfg(tmp_path, monkeypatch, api_key="testkey123", session_secret="testsecret456")
 
     def fake_run_agent(question, cfg, confirm_fn, collected_chunks=None,
@@ -82,7 +82,7 @@ def test_web_query_logs_query_event(tmp_path, monkeypatch, mocker):
 
 
 def test_login_logs_auth_event(tmp_path, monkeypatch):
-    monkeypatch.setenv("ITKB_SILENT", "1")
+    monkeypatch.setenv("SRAG_SILENT", "1")
     _tmp_cfg(tmp_path, monkeypatch, api_key="testkey123", session_secret="testsecret456")
 
     from srag.api.app import app
@@ -98,7 +98,7 @@ def test_login_logs_auth_event(tmp_path, monkeypatch):
 
 
 def test_ingest_logs_ingest_event(tmp_path, monkeypatch):
-    monkeypatch.setenv("ITKB_SILENT", "1")
+    monkeypatch.setenv("SRAG_SILENT", "1")
     _tmp_cfg(tmp_path, monkeypatch, api_key="testkey123", session_secret="testsecret456")
 
     # /tmp is in PROGRAM.md's ingest whitelist (repo root PROGRAM.md).
@@ -127,7 +127,7 @@ def test_ingest_logs_ingest_event(tmp_path, monkeypatch):
 
 
 def test_delete_logs_delete_event(tmp_path, monkeypatch):
-    monkeypatch.setenv("ITKB_SILENT", "1")
+    monkeypatch.setenv("SRAG_SILENT", "1")
     _tmp_cfg(tmp_path, monkeypatch, api_key="testkey123", session_secret="testsecret456")
 
     from srag.store.db import init_db, upsert_document, doc_id
@@ -157,7 +157,7 @@ def test_delete_logs_delete_event(tmp_path, monkeypatch):
 
 
 def test_command_logs_command_event(tmp_path, monkeypatch, mocker):
-    monkeypatch.setenv("ITKB_SILENT", "1")
+    monkeypatch.setenv("SRAG_SILENT", "1")
     _tmp_cfg(tmp_path, monkeypatch, audit_enabled=True)
 
     from srag.store.db import init_db
@@ -178,7 +178,7 @@ def test_command_logs_command_event(tmp_path, monkeypatch, mocker):
 
 
 def test_cli_ingest_logs_ingest_event(tmp_path, monkeypatch):
-    monkeypatch.setenv("ITKB_SILENT", "1")
+    monkeypatch.setenv("SRAG_SILENT", "1")
     _tmp_cfg(tmp_path, monkeypatch, audit_enabled=True)
 
     import pathlib

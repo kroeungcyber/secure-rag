@@ -3,9 +3,9 @@ requires = ["setuptools>=68.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "srag"
+name = "secure-rag"
 version = "0.1.0"
-description = "Local LLM IT Knowledge Base"
+description = "RAG document Q&A service for civil society organizations — offline-capable, denied-by-default, fully containerized."
 requires-python = ">=3.9"
 dependencies = [
     "pypdf>=4.0",

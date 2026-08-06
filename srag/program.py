@@ -9,7 +9,7 @@ PROGRAM_PATH = Path(__file__).parent.parent / "PROGRAM.md"
 
 
 def _read_program() -> str:
-    path = Path(os.environ.get("ITKB_PROGRAM_PATH", PROGRAM_PATH))
+    path = Path(os.environ.get("SRAG_PROGRAM_PATH", PROGRAM_PATH))
     return path.read_text()
 
 

@@ -51,6 +51,6 @@ def test_program_path_env_override(tmp_path, monkeypatch):
     custom.write_text(
         "## 5. Command Execution\n\n```yaml\ncommands_enabled: true\n```\n"
     )
-    monkeypatch.setenv("ITKB_PROGRAM_PATH", str(custom))
+    monkeypatch.setenv("SRAG_PROGRAM_PATH", str(custom))
     from srag.program import commands_enabled
     assert commands_enabled() is True

@@ -42,7 +42,7 @@ def test_ingest_hook_applies_redaction(tmp_path, monkeypatch, fake_embedding_fn,
     import uuid
     import srag.config as cfg_mod
 
-    monkeypatch.setenv("ITKB_SILENT", "1")
+    monkeypatch.setenv("SRAG_SILENT", "1")
     monkeypatch.setenv("HOME", str(tmp_path))
     cfg_mod.CONFIG_DIR = tmp_path / ".srag"
     cfg_mod.CONFIG_FILE = cfg_mod.CONFIG_DIR / "config.toml"
@@ -54,6 +54,9 @@ def test_ingest_hook_applies_redaction(tmp_path, monkeypatch, fake_embedding_fn,
     init_db(str(tmp_path / "srag.sqlite"))
     mocker.patch("srag.ingestion.embedder.embed_texts",
                  side_effect=lambda texts, model: [fake_embedding_fn(t, model) for t in texts])
+    # These tests exercise the redaction hook, not the path whitelist; the CSO
+    # PROGRAM.md denies /tmp, so allow the ingest path directly.
+    mocker.patch("srag.program.ingest_path_allowed", return_value=True)
 
     src = pathlib.Path("/tmp") / f"srag-redact-{uuid.uuid4().hex}.md"
     src.write_text("# Note\n\nreach me at foo@bar.com or 123-45-6789\n")
@@ -81,7 +84,7 @@ def test_ingest_hook_respects_toggle_off(tmp_path, monkeypatch, fake_embedding_f
     import uuid
     import srag.config as cfg_mod
 
-    monkeypatch.setenv("ITKB_SILENT", "1")
+    monkeypatch.setenv("SRAG_SILENT", "1")
     monkeypatch.setenv("HOME", str(tmp_path))
     cfg_mod.CONFIG_DIR = tmp_path / ".srag"
     cfg_mod.CONFIG_FILE = cfg_mod.CONFIG_DIR / "config.toml"
@@ -93,6 +96,9 @@ def test_ingest_hook_respects_toggle_off(tmp_path, monkeypatch, fake_embedding_f
     init_db(str(tmp_path / "srag.sqlite"))
     mocker.patch("srag.ingestion.embedder.embed_texts",
                  side_effect=lambda texts, model: [fake_embedding_fn(t, model) for t in texts])
+    # See test_ingest_hook_applies_redaction: this tests the toggle, not the
+    # path whitelist.
+    mocker.patch("srag.program.ingest_path_allowed", return_value=True)
 
     src = pathlib.Path("/tmp") / f"srag-noredact-{uuid.uuid4().hex}.md"
     src.write_text("# Note\n\nreach me at foo@bar.com\n")

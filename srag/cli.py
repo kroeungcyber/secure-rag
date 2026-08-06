@@ -6,7 +6,7 @@ import typer
 from rich.console import Console
 from rich.table import Table
 
-app = typer.Typer(name="kb", help="Local LLM IT Knowledge Base", add_completion=False)
+app = typer.Typer(name="srag", help="RAG document Q&A for civil society organizations", add_completion=False)
 console = Console(highlight=False)
 
 

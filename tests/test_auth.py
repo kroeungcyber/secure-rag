@@ -14,7 +14,7 @@ from srag.api.auth import _sign, make_session_token, verify_session_token
 
 def _temp_config(tmp_path, monkeypatch):
     monkeypatch.setenv("HOME", str(tmp_path))
-    monkeypatch.setenv("ITKB_SILENT", "1")
+    monkeypatch.setenv("SRAG_SILENT", "1")
     cfg_mod.CONFIG_DIR = tmp_path / ".srag"
     cfg_mod.CONFIG_FILE = cfg_mod.CONFIG_DIR / "config.toml"
     cfg_mod.CONFIG_DIR.mkdir(parents=True, exist_ok=True)
@@ -152,7 +152,7 @@ def test_expired_cookie_rejected(authed_config):
 
 
 def test_health_endpoint_open_and_unauthenticated(tmp_path, monkeypatch):
-    monkeypatch.setenv("ITKB_SILENT", "1")
+    monkeypatch.setenv("SRAG_SILENT", "1")
     _temp_config(tmp_path, monkeypatch)
     with TestClient(app) as client:
         r = client.get("/health")
@@ -161,7 +161,7 @@ def test_health_endpoint_open_and_unauthenticated(tmp_path, monkeypatch):
 
 
 def test_docs_and_openapi_disabled(tmp_path, monkeypatch):
-    monkeypatch.setenv("ITKB_SILENT", "1")
+    monkeypatch.setenv("SRAG_SILENT", "1")
     _temp_config(tmp_path, monkeypatch)
     with TestClient(app) as client:
         assert client.get("/docs").status_code == 404

@@ -20,7 +20,7 @@ from srag.store.db import init_db, list_documents, delete_document
 @asynccontextmanager
 async def lifespan(app):
     # apply_env=False: save_config below must persist only the on-disk
-    # config plus the new keys, never a transient ITKB_MODEL/ITKB_EMBED_MODEL
+    # config plus the new keys, never a transient SRAG_MODEL/SRAG_EMBED_MODEL
     # env override from load_config.
     cfg = load_config(apply_env=False)
     changed = False
@@ -32,14 +32,14 @@ async def lifespan(app):
         changed = True
     if changed:
         save_config(cfg)
-        if not os.environ.get("ITKB_SILENT"):
+        if not os.environ.get("SRAG_SILENT"):
             print(f"\n=== srag API key ===\n{cfg.api_key}\n=====================\n")
     init_db(cfg.db_path)
     yield
 
 
 # docs_url/openapi_url disabled: the API schema and route map are not public.
-app = FastAPI(title="srag Web UI", docs_url=None, openapi_url=None, lifespan=lifespan)
+app = FastAPI(title="secure-rag Web UI", docs_url=None, openapi_url=None, lifespan=lifespan)
 
 _STATIC = Path(__file__).parent / "web" / "static"
 _TEMPLATES = Path(__file__).parent / "web" / "templates"

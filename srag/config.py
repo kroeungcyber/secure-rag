@@ -11,7 +11,7 @@ CONFIG_FILE = CONFIG_DIR / "config.toml"
 
 @dataclass
 class Config:
-    model: str = "llama3.1:8b"
+    model: str = "llama3.2:3b"
     embed_model: str = "nomic-embed-text"
     db_path: str = str(Path.home() / ".srag" / "srag.sqlite")
     top_k: int = 5
@@ -32,10 +32,10 @@ def load_config(apply_env: bool = True) -> Config:
     valid_keys = {f.name for f in fields(Config)}
     cfg = Config(**{k: v for k, v in data.items() if k in valid_keys})
     if apply_env:
-        if os.environ.get("ITKB_MODEL"):
-            cfg.model = os.environ["ITKB_MODEL"]
-        if os.environ.get("ITKB_EMBED_MODEL"):
-            cfg.embed_model = os.environ["ITKB_EMBED_MODEL"]
+        if os.environ.get("SRAG_MODEL"):
+            cfg.model = os.environ["SRAG_MODEL"]
+        if os.environ.get("SRAG_EMBED_MODEL"):
+            cfg.embed_model = os.environ["SRAG_EMBED_MODEL"]
     return cfg
 
 def save_config(cfg: Config) -> None:
