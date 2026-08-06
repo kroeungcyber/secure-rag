@@ -1,0 +1,84 @@
+x-api-common: &api-common
+  build: .
+  ports:
+    - "8000:8000"
+  volumes:
+    - srag-data:/root/.srag
+    - ./samples:/samples:ro
+    - ./PROGRAM.md:/app/PROGRAM.md:ro
+  healthcheck:
+    test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+    interval: 10s
+    timeout: 3s
+    retries: 12
+
+services:
+  # Host Ollama: API only, talks to the host's Ollama (GPU on this Mac).
+  # Gated behind a profile so it never co-publishes 8000 with api-demo.
+  api:
+    <<: *api-common
+    profiles: ["host-ollama"]
+    environment:
+      OLLAMA_HOST: http://host.docker.internal:11434
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  # Bundled demo: API wired to the compose Ollama service + small models.
+  api-demo:
+    <<: *api-common
+    profiles: ["bundled"]
+    environment:
+      OLLAMA_HOST: http://ollama:11434
+      ITKB_MODEL: llama3.2:3b
+      ITKB_EMBED_MODEL: nomic-embed-text
+    depends_on:
+      ollama-init:
+        condition: service_completed_successfully
+
+  ollama:
+    profiles: ["bundled"]
+    image: ollama/ollama:latest
+    volumes:
+      - ollama-models:/root/.ollama
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+
+  ollama-init:
+    profiles: ["bundled"]
+    image: ollama/ollama:latest
+    restart: "no"
+    depends_on:
+      ollama:
+        condition: service_healthy
+    environment:
+      OLLAMA_HOST: http://ollama:11434
+    # `ollama pull` opens an interactive TUI that fails without a TTY, so pull
+    # via the HTTP API instead (curl is not in the image — install it). The && 
+    # chain fails closed: any failed pull makes this container exit non-zero.
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - "apt-get update >/dev/null 2>&1 && apt-get install -y --no-install-recommends curl >/dev/null 2>&1 && curl -fsS -X POST http://ollama:11434/api/pull -d '{\"name\":\"llama3.2:3b\"}' >/dev/null && curl -fsS -X POST http://ollama:11434/api/pull -d '{\"name\":\"nomic-embed-text\"}' >/dev/null && echo models ready"
+
+  # Optional: pre-load samples/ into the KB (use together with bundled).
+  ingest-samples:
+    profiles: ["demo-data"]
+    build: .
+    restart: "no"
+    volumes:
+      - srag-data:/root/.srag
+      - ./samples:/samples:ro
+      - ./PROGRAM.md:/app/PROGRAM.md:ro
+    environment:
+      OLLAMA_HOST: http://ollama:11434
+      ITKB_EMBED_MODEL: nomic-embed-text
+    depends_on:
+      ollama-init:
+        condition: service_completed_successfully
+    command: ["srag", "add", "/samples"]
+
+volumes:
+  srag-data:
+  ollama-models:

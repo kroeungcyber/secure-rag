@@ -1,0 +1,15 @@
+.git
+.claude
+.gstack
+.venv
+__pycache__
+*.pyc
+.pytest_cache
+.mypy_cache
+build/
+dist/
+*.egg-info
+*.whl
+docs/
+tests/
+*.sqlite

@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>srag — Notes</title>
+  <link rel="stylesheet" href="/static/style.css?v=3">
+  <style>
+    .notes-list { display: flex; flex-direction: column; gap: 1rem; }
+    .note-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 1rem;
+    }
+    .note-body {
+      color: var(--text-primary);
+      font-size: 0.925rem;
+      line-height: 1.6;
+      margin-bottom: 0.5rem;
+    }
+    .note-meta {
+      display: flex;
+      gap: 2rem;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+    .note-linked   { color: var(--accent); }
+    .note-unlinked { color: var(--text-muted); font-style: italic; }
+    .note-id       { font-family: var(--font-mono); color: var(--text-muted); }
+  </style>
+</head>
+<body>
+
+<!-- ── Sidebar ────────────────────────────────────────────── -->
+<aside class="sidebar">
+  <div class="sidebar-brand">srag</div>
+  <a href="/" class="new-chat-btn">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+    New chat
+  </a>
+  <nav class="sidebar-nav">
+    <a href="/">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+      Chat
+    </a>
+    <a href="/docs-ui">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+      Documents
+    </a>
+    <a href="/history">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      History
+    </a>
+    <a href="/notes" class="active">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3v4a1 1 0 0 0 1 1h4"/><path d="M17 21H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z"/></svg>
+      Notes
+    </a>
+  </nav>
+  <div class="sidebar-footer">
+    IT Knowledge Base<br>
+    Local-first &middot; Ollama
+  </div>
+</aside>
+
+<!-- ── Main ───────────────────────────────────────────────── -->
+<main class="main">
+  <div class="chat-header">
+    <span class="header-icon">📝</span> Notes
+  </div>
+  <div class="page-content">
+    <h2>Incident Notes</h2>
+    <p style="color: var(--text-secondary); font-size: 0.875rem; margin-bottom: 1rem;">
+      Notes auto-link to the most recent query. Run <code>kb note "text"</code> to add one.
+    </p>
+    <div class="notes-list" id="notes-list">
+      <p style="color: var(--text-muted);">Loading…</p>
+    </div>
+  </div>
+</main>
+
+<script>
+"use strict";
+const notesList = document.getElementById("notes-list");
+
+fetch("/api/notes").then(r => r.json()).then(notes => {
+  notesList.textContent = "";
+  if (!notes.length) {
+    notesList.innerHTML = '<p style="color: var(--text-muted);">No notes yet. Run <code>kb note "text"</code> to record one.</p>';
+    return;
+  }
+  notes.forEach(n => {
+    const card = document.createElement("div");
+    card.className = "note-card";
+
+    const body = document.createElement("div");
+    body.className = "note-body";
+    body.textContent = n.body;
+    card.appendChild(body);
+
+    const meta = document.createElement("div");
+    meta.className = "note-meta";
+
+    const linked = document.createElement("span");
+    if (n.linked_question) {
+      linked.className = "note-linked";
+      linked.textContent = "Q: " + n.linked_question;
+    } else {
+      linked.className = "note-unlinked";
+      linked.textContent = "(no linked query)";
+    }
+    meta.appendChild(linked);
+
+    const time = document.createElement("span");
+    time.textContent = n.created_at.slice(0, 19).replace("T", " ");
+    meta.appendChild(time);
+
+    const idSpan = document.createElement("span");
+    idSpan.className = "note-id";
+    idSpan.textContent = "#" + n.id;
+    meta.appendChild(idSpan);
+
+    card.appendChild(meta);
+    notesList.appendChild(card);
+  });
+});
+</script>
+<div id="auth-overlay" style="display:none;position:fixed;inset:0;background:#faf9f5;z-index:1000;align-items:center;justify-content:center;flex-direction:column;gap:1rem;text-align:center">
+  <h2>Enter API key</h2>
+  <p style="color:#6b6659">Paste the API key printed when the server started.</p>
+  <input id="auth-key-input" type="password" placeholder="API key"
+         style="padding:0.6rem 0.75rem;border:1px solid #e6e1d3;border-radius:6px;width:280px">
+  <button id="auth-login-btn"
+          style="background:#c1653c;color:#fff;border:none;padding:0.6rem 1.25rem;border-radius:6px;cursor:pointer">Log in</button>
+  <div id="auth-error" style="color:#a83b32"></div>
+</div>
+<script>
+(function () {
+  function show() { document.getElementById("auth-overlay").style.display = "flex"; }
+  fetch("/api/notes").then(function (r) { if (r.status === 401) show(); }).catch(show);
+  document.getElementById("auth-login-btn").addEventListener("click", function () {
+    var key = document.getElementById("auth-key-input").value.trim();
+    fetch("/api/login", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ key: key }) })
+      .then(function (r) { if (r.ok) { location.reload(); } else { document.getElementById("auth-error").textContent = "Invalid key"; } })
+      .catch(function () { document.getElementById("auth-error").textContent = "Request failed"; });
+  });
+})();
+</script>
+</body>
+</html>
