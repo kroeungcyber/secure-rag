@@ -54,3 +54,15 @@ def test_program_path_env_override(tmp_path, monkeypatch):
     monkeypatch.setenv("SRAG_PROGRAM_PATH", str(custom))
     from srag.program import commands_enabled
     assert commands_enabled() is True
+
+
+def test_parse_strips_inline_comments():
+    from srag.program import _parse_yaml_block, _parse_list
+    text = (
+        "## 5. Command Execution\n\n```yaml\n"
+        "commands_enabled: true  # the toggle\n```\n\n"
+        "## 2. Path Whitelist\n\n```yaml\n"
+        "- /samples/  # NGO docs\n- /tmp/\n```\n"
+    )
+    assert _parse_yaml_block(text, "Command Execution") == {"commands_enabled": "true"}
+    assert _parse_list(text, "Path Whitelist") == ["/samples/", "/tmp/"]

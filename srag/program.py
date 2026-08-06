@@ -24,7 +24,8 @@ def _parse_yaml_block(text: str, heading: str) -> dict:
         line = line.strip()
         if ":" in line and not line.startswith("#"):
             key, _, val = line.partition(":")
-            out[key.strip()] = val.strip().strip('"').strip("'")
+            val = val.split("#", 1)[0].strip().strip('"').strip("'")
+            out[key.strip()] = val
     return out
 
 
@@ -36,7 +37,7 @@ def _parse_list(text: str, heading: str) -> list[str]:
         return []
     items = []
     for line in m.group(1).strip().split("\n"):
-        stripped = line.strip().lstrip("- ").strip().strip('"').strip("'")
+        stripped = line.strip().lstrip("- ").split("#", 1)[0].strip().strip('"').strip("'")
         if stripped and not stripped.startswith("#"):
             items.append(stripped)
     return items
