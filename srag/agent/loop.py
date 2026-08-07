@@ -92,8 +92,12 @@ def run_agent(
 
             if name == "search_kb":
                 q_emb = embed_query(args["query"], cfg.embed_model)
+                try:
+                    top_k = int(args.get("top_k", cfg.top_k))
+                except (TypeError, ValueError):
+                    top_k = cfg.top_k
                 chunks = search_kb(args["query"], q_emb, cfg.db_path,
-                                   args.get("top_k", cfg.top_k),
+                                   top_k,
                                    embed_model=cfg.embed_model)
                 context_chunks.extend(chunks)
                 if collected_chunks is not None:
