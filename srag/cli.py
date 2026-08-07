@@ -11,6 +11,8 @@ console = Console(highlight=False)
 
 
 def _cfg():
+    from srag.program import reload_config_from_program
+    reload_config_from_program()  # PROGRAM.md is the single source of truth for models/top_k/trusted
     from srag.config import load_config
     return load_config()
 
@@ -196,7 +198,7 @@ def query(
         console.print(
             f"[yellow]Warning:[/yellow] {stale} document(s) were embedded with a "
             f"different model than the current embed_model ({cfg.embed_model}) and "
-            f"are excluded from search results until you run [bold]kb reindex[/bold]."
+            f"are excluded from search results until you run [bold]srag reindex[/bold]."
         )
 
     def confirm(cmd: str) -> bool:
@@ -330,7 +332,7 @@ def config(
             console.print(f"  {k} = {v}")
     elif action == "set":
         if not key or value is None:
-            console.print("[red]Usage: kb config set <key> <value>[/red]")
+            console.print("[red]Usage: srag config set <key> <value>[/red]")
             raise typer.Exit(1)
         d = asdict(cfg)
         if key not in d:
@@ -373,7 +375,7 @@ def list_notes_cmd():
     notes = list_notes(cfg.db_path)
 
     if not notes:
-        console.print("[dim]No notes yet. Use [bold]kb note[/bold] to record one.[/dim]")
+        console.print("[dim]No notes yet. Use [bold]srag note[/bold] to record one.[/dim]")
         return
 
     table = Table(title="Incident Notes")

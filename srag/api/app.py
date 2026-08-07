@@ -19,6 +19,10 @@ from srag.store.db import init_db, list_documents, delete_document
 
 @asynccontextmanager
 async def lifespan(app):
+    # PROGRAM.md is the single source of truth: sync models/top_k/trusted into
+    # config.toml before the key bootstrap reads it.
+    from srag.program import reload_config_from_program
+    reload_config_from_program()
     # apply_env=False: save_config below must persist only the on-disk
     # config plus the new keys, never a transient SRAG_MODEL/SRAG_EMBED_MODEL
     # env override from load_config.

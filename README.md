@@ -259,7 +259,7 @@ node_modules — consistent with the local-first, offline goal.
 ## Tests
 
 ```bash
-pytest -v                # 135 unit tests (no Ollama needed)
+pytest -v                # unit tests (no Ollama needed; real-model integration tests skip when Ollama is absent)
 ```
 
 Two integration tests (`tests/test_integration.py`) run automatically when a

@@ -66,3 +66,24 @@ def test_parse_strips_inline_comments():
     )
     assert _parse_yaml_block(text, "Command Execution") == {"commands_enabled": "true"}
     assert _parse_list(text, "Path Whitelist") == ["/samples/", "/tmp/"]
+
+
+
+def test_cfg_syncs_models_from_program(tmp_path, monkeypatch):
+    """The flagship governance claim: PROGRAM.md models sync into the config."""
+    monkeypatch.setenv("HOME", str(tmp_path))
+    custom = tmp_path / "PROGRAM.md"
+    custom.write_text(
+        "## 1. Models\n\n```yaml\nchat: my-cso-model:latest\nembed: my-embed:latest\n```\n"
+        "## 5. Query Behavior\n\n```yaml\ntop_k: 9\n```\n"
+    )
+    monkeypatch.setenv("SRAG_PROGRAM_PATH", str(custom))
+    import itkb.config as cfg_mod
+    cfg_mod.CONFIG_DIR = tmp_path / ".srag"
+    cfg_mod.CONFIG_FILE = cfg_mod.CONFIG_DIR / "config.toml"
+
+    from srag.cli import _cfg
+    cfg = _cfg()
+    assert cfg.model == "my-cso-model:latest"
+    assert cfg.embed_model == "my-embed:latest"
+    assert cfg.top_k == 9

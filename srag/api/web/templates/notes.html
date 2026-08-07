@@ -71,7 +71,7 @@
   <div class="page-content">
     <h2>Incident Notes</h2>
     <p style="color: var(--text-secondary); font-size: 0.875rem; margin-bottom: 1rem;">
-      Notes auto-link to the most recent query. Run <code>kb note "text"</code> to add one.
+      Notes auto-link to the most recent query. Run <code>srag note "text"</code> to add one.
     </p>
     <div class="notes-list" id="notes-list">
       <p style="color: var(--text-muted);">Loading…</p>
@@ -86,7 +86,7 @@ const notesList = document.getElementById("notes-list");
 fetch("/api/notes").then(r => r.json()).then(notes => {
   notesList.textContent = "";
   if (!notes.length) {
-    notesList.innerHTML = '<p style="color: var(--text-muted);">No notes yet. Run <code>kb note "text"</code> to record one.</p>';
+    notesList.innerHTML = '<p style="color: var(--text-muted);">No notes yet. Run <code>srag note "text"</code> to record one.</p>';
     return;
   }
   notes.forEach(n => {

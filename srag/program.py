@@ -38,7 +38,8 @@ def _parse_list(text: str, heading: str) -> list[str]:
     items = []
     for line in m.group(1).strip().split("\n"):
         stripped = line.strip().lstrip("- ").split("#", 1)[0].strip().strip('"').strip("'")
-        if stripped and not stripped.startswith("#"):
+        # A bare `key:` line (e.g. `ingest_paths:`) is a section header, not an item.
+        if stripped and not stripped.startswith("#") and not stripped.endswith(":"):
             items.append(stripped)
     return items
 

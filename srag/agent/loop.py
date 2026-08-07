@@ -25,7 +25,7 @@ def _format_chunk(c: dict) -> str:
 def _load_dotenv() -> None:
     """Load TAVILY_API_KEY from ~/srag/.env into os.environ if present."""
     from pathlib import Path
-    env_file = Path.home() / "srag" / ".env"
+    env_file = Path.home() / ".srag" / ".env"
     if not env_file.exists():
         return
     for line in env_file.read_text().splitlines():
@@ -96,6 +96,7 @@ def run_agent(
                     top_k = int(args.get("top_k", cfg.top_k))
                 except (TypeError, ValueError):
                     top_k = cfg.top_k
+                top_k = max(1, min(top_k, 100))
                 chunks = search_kb(args["query"], q_emb, cfg.db_path,
                                    top_k,
                                    embed_model=cfg.embed_model)

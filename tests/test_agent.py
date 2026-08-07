@@ -261,3 +261,57 @@ def test_search_kb_top_k_garbage_falls_back_to_default(mocker, db_path):
     list(run_agent("q", cfg, confirm_fn=lambda cmd: False))
     top_k = mock_search.call_args[0][3]
     assert top_k == cfg.top_k
+
+
+def test_search_kb_top_k_clamped(mocker, db_path):
+    call_count = 0
+
+    def fake_chat(**kwargs):
+        nonlocal call_count
+        call_count += 1
+        if call_count == 1:
+            return {
+                "message": {
+                    "content": "",
+                    "tool_calls": [{
+                        "function": {"name": "search_kb",
+                                     "arguments": {"query": "q", "top_k": "-5"}},
+                    }],
+                }
+            }
+        return {"message": {"content": "done", "tool_calls": []}}
+
+    mocker.patch("srag.agent.loop.ollama.chat", side_effect=fake_chat)
+    mocker.patch("srag.agent.loop.embed_query", return_value=[0.1] * 768)
+    mocker.patch("srag.agent.loop.suggest_followups", return_value=[])
+    mock_search = mocker.patch("srag.agent.loop.search_kb", return_value=[])
+
+    list(run_agent("q", _cfg(db_path), confirm_fn=lambda cmd: False))
+    assert mock_search.call_args[0][3] == 1  # clamped to min 1
+
+
+def test_search_kb_top_k_absurd_clamped(mocker, db_path):
+    call_count = 0
+
+    def fake_chat(**kwargs):
+        nonlocal call_count
+        call_count += 1
+        if call_count == 1:
+            return {
+                "message": {
+                    "content": "",
+                    "tool_calls": [{
+                        "function": {"name": "search_kb",
+                                     "arguments": {"query": "q", "top_k": "999999"}},
+                    }],
+                }
+            }
+        return {"message": {"content": "done", "tool_calls": []}}
+
+    mocker.patch("srag.agent.loop.ollama.chat", side_effect=fake_chat)
+    mocker.patch("srag.agent.loop.embed_query", return_value=[0.1] * 768)
+    mocker.patch("srag.agent.loop.suggest_followups", return_value=[])
+    mock_search = mocker.patch("srag.agent.loop.search_kb", return_value=[])
+
+    list(run_agent("q", _cfg(db_path), confirm_fn=lambda cmd: False))
+    assert mock_search.call_args[0][3] == 100  # clamped to max 100
