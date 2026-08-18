@@ -1,5 +1,7 @@
 # secure-rag (srag) — RAG Document Q&A for Civil Society Organizations
 
+[![CI](https://github.com/kroeungcyber/secure-rag/actions/workflows/ci.yml/badge.svg)](https://github.com/kroeungcyber/secure-rag/actions/workflows/ci.yml)
+
 RAG document Q&A service for civil society organizations — offline-capable,
 denied-by-default, fully containerized.
 
