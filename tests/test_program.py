@@ -78,9 +78,6 @@ def test_cfg_syncs_models_from_program(tmp_path, monkeypatch):
         "## 5. Query Behavior\n\n```yaml\ntop_k: 9\n```\n"
     )
     monkeypatch.setenv("SRAG_PROGRAM_PATH", str(custom))
-    import itkb.config as cfg_mod
-    cfg_mod.CONFIG_DIR = tmp_path / ".srag"
-    cfg_mod.CONFIG_FILE = cfg_mod.CONFIG_DIR / "config.toml"
 
     from srag.cli import _cfg
     cfg = _cfg()
