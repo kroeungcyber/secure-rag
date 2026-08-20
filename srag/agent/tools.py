@@ -63,9 +63,10 @@ TOOL_DEFINITIONS = [
 
 
 def search_kb(query_text: str, query_embedding: list[float], db_path: str, top_k: int,
-              embed_model: str | None = None) -> list[dict]:
+              embed_model: str | None = None,
+              visible_doc_ids: set[str] | None = None) -> list[dict]:
     results = hybrid_search_chunks(db_path, query_embedding, query_text, top_k,
-                                    embed_model=embed_model)
+                                    embed_model=embed_model, visible_doc_ids=visible_doc_ids)
     return [
         {
             "id": chunk.id,

@@ -14,6 +14,7 @@ class Document:
     chunk_count: int
     mtime: float
     embed_model: str = ""
+    roles: str = ""
 
 @dataclass
 class Chunk:
@@ -36,3 +37,30 @@ class Chunk:
             chunk_index=chunk_index,
             metadata=json.loads(metadata_str or "{}"),
         )
+
+
+@dataclass
+class User:
+    id: str
+    username: str
+    password_hash: str
+    role: str
+    status: str
+    created_at: str
+    last_login: str = ""
+
+    def is_active(self) -> bool:
+        return self.status == "active"
+
+
+@dataclass
+class Invite:
+    token: str
+    role: str
+    created_by: str
+    created_at: str
+    expires_at: str
+    claimed_by: str = ""
+
+    def is_claimable(self, now: str) -> bool:
+        return not self.claimed_by and self.expires_at > now

@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Get started — srag</title>
+  <style>
+    :root {
+      --bg: #faf9f5; --surface: #ffffff; --border: #e6e1d3;
+      --accent: #c1653c; --accent-hover: #a8532f; --accent-tint: #f4e3d7;
+      --text: #2d2b26; --muted: #6b6659; --ok: #3d7a4a;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: var(--bg); color: var(--text); min-height: 100vh; display: flex;
+      align-items: center; justify-content: center; padding: 1.5rem; }
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px;
+      width: 100%; max-width: 480px; padding: 2rem; box-shadow: 0 6px 24px rgba(45,43,38,.05); }
+    h1 { font-size: 1.3rem; letter-spacing: -.02em; margin-bottom: .25rem; }
+    .sub { color: var(--muted); font-size: .85rem; margin-bottom: 1.5rem; }
+    .step { display: flex; gap: .9rem; align-items: flex-start; padding: .9rem .75rem;
+      border: 1px solid var(--border); border-radius: 12px; margin-bottom: .75rem; }
+    .step.done { background: var(--accent-tint); border-color: transparent; }
+    .check { width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--border);
+      flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+      color: #fff; font-size: .8rem; font-weight: 700; background: transparent; cursor: pointer; }
+    .step.done .check { background: var(--accent); border-color: var(--accent); }
+    .step h3 { font-size: .95rem; font-weight: 600; margin-bottom: .2rem; }
+    .step p { font-size: .82rem; color: var(--muted); line-height: 1.5; }
+    button.primary { width: 100%; margin-top: 1.25rem; padding: .65rem; border: none; border-radius: 8px;
+      background: var(--accent); color: #fff; font-size: .95rem; font-weight: 600; cursor: pointer; font-family: inherit; }
+    button.primary:hover { background: var(--accent-hover); }
+    .role { display: inline-block; font-size: .75rem; background: var(--accent-tint);
+      color: var(--accent-hover); padding: .15rem .55rem; border-radius: 999px; margin-bottom: 1rem; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Welcome 👋</h1>
+    <div class="sub">Three quick steps to get started. No one is left behind.</div>
+    <div class="role" id="role">…</div>
+    <div id="steps">Loading…</div>
+    <button class="primary" id="btn-done" disabled>Go to chat</button>
+  </div>
+
+  <script>
+    "use strict";
+    var allDone = false;
+    function jfetch(url, opts) {
+      return fetch(url, opts).then(function (r) {
+        if (r.status === 401) { location.href = "/login"; throw new Error("unauthorized"); }
+        return r.json();
+      });
+    }
+    function render(data) {
+      document.getElementById("role").textContent = "Role: " + data.role;
+      var el = document.getElementById("steps");
+      el.innerHTML = "";
+      allDone = true;
+      data.steps.forEach(function (s) {
+        if (!s.done) allDone = false;
+        var div = document.createElement("div");
+        div.className = "step" + (s.done ? " done" : "");
+        var check = document.createElement("button");
+        check.className = "check";
+        check.textContent = s.done ? "✓" : "";
+        check.setAttribute("aria-label", "Mark complete");
+        check.addEventListener("click", function () {
+          jfetch("/api/onboarding/" + s.key, { method: "POST" }).then(render);
+        });
+        var body = document.createElement("div");
+        var h = document.createElement("h3"); h.textContent = s.title;
+        var p = document.createElement("p"); p.textContent = s.hint;
+        body.appendChild(h); body.appendChild(p);
+        div.appendChild(check); div.appendChild(body);
+        el.appendChild(div);
+      });
+      document.getElementById("btn-done").disabled = !allDone;
+    }
+    document.getElementById("btn-done").addEventListener("click", function () {
+      location.href = "/";
+    });
+    jfetch("/api/onboarding").then(render);
+  </script>
+</body>
+</html>

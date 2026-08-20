@@ -53,7 +53,7 @@ def test_web_query_logs_query_event(tmp_path, monkeypatch, mocker):
     _tmp_cfg(tmp_path, monkeypatch, api_key="testkey123", session_secret="testsecret456")
 
     def fake_run_agent(question, cfg, confirm_fn, collected_chunks=None,
-                       query_id_holder=None):
+                       query_id_holder=None, visible_doc_ids=None):
         if query_id_holder is not None:
             query_id_holder.append("qid123")
         collected_chunks.extend(["1", "2"])

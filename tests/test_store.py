@@ -4,6 +4,7 @@ from srag.store.db import (
     insert_chunks, search_chunks, search_chunks_fts, hybrid_search_chunks,
     list_documents, log_command, doc_id,
     stale_embed_model_count, create_pending_command, consume_pending_command,
+    max_cosine_similarity,
 )
 from srag.store.models import Document, Chunk
 from datetime import datetime, timezone
@@ -208,3 +209,30 @@ def test_log_command(db_path):
     conn.close()
     assert row[0] == "ls -la"
     assert row[1] == 0
+
+
+def test_max_cosine_similarity_identical_vectors(db_path):
+    doc = make_doc()
+    upsert_document(db_path, doc)
+    chunk = Chunk(id=None, doc_id=doc.id, content="hello", chunk_index=0)
+    insert_chunks(db_path, [chunk], [[0.5] * 768])
+    chunk_id = search_chunks(db_path, [0.5] * 768, top_k=1)[0][0].id
+
+    sim = max_cosine_similarity(db_path, [0.5] * 768, [chunk_id])
+    assert abs(sim - 1.0) < 1e-6
+
+
+def test_max_cosine_similarity_clamps_opposite_to_zero(db_path):
+    doc = make_doc()
+    upsert_document(db_path, doc)
+    chunk = Chunk(id=None, doc_id=doc.id, content="hello", chunk_index=0)
+    insert_chunks(db_path, [chunk], [[0.5] * 768])
+    chunk_id = search_chunks(db_path, [0.5] * 768, top_k=1)[0][0].id
+
+    sim = max_cosine_similarity(db_path, [-0.5] * 768, [chunk_id])
+    assert sim == 0.0
+
+
+def test_max_cosine_similarity_empty_or_unknown(db_path):
+    assert max_cosine_similarity(db_path, [0.5] * 768, []) == 0.0
+    assert max_cosine_similarity(db_path, [0.5] * 768, [999999]) == 0.0

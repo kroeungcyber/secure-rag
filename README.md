@@ -34,6 +34,12 @@ srag serve
 # → http://localhost:8000
 ```
 
+An NGO-domain demo corpus (IT SOP, data-protection policy, field-worker
+handbook, grant FAQ — all fictional) lives in `samples/ngo-demo/`. A full
+end-to-end walkthrough with the real local models, including role-scoped
+retrieval and an honest note on small-model limitations, is in
+[`docs/demo.md`](docs/demo.md).
+
 ## Run with Docker
 
 Prereq: Docker Desktop (or Docker Engine + compose plugin).
@@ -138,11 +144,39 @@ srag reindex                 # Re-embed all docs (after switching embed model)
 ## Web UI
 
 ```
-http://localhost:8000/          Chat — ask questions, see streaming answers
-http://localhost:8000/docs-ui   Documents — add, list, delete knowledge
-http://localhost:8000/history   History — command execution log
-http://localhost:8000/notes     Notes — post-incident notes linked to queries
+http://localhost:8000/            Chat — ask questions, see streaming answers
+http://localhost:8000/login       Sign in — username/password, admin key, or claim invite
+http://localhost:8000/onboarding  Get started — first-run checklist for new users
+http://localhost:8000/admin       Admin — users, invites, document access
+http://localhost:8000/docs-ui     Documents — add, list, delete knowledge (admin)
+http://localhost:8000/history     History — command execution log (admin)
+http://localhost:8000/notes       Notes — post-incident notes linked to queries (admin)
 ```
+
+## Onboarding & roles
+
+secure-rag is multi-user with three roles, so a field office can onboard its
+whole team — **no one left behind**:
+
+| Role | Can ask | Can ingest/manage | Can manage users |
+|---|---|---|---|
+| `admin` (IT support) | ✅ all docs | ✅ | ✅ |
+| `staff` (team member) | ✅ role-scoped docs | ❌ | ❌ |
+| `field` (field/patient worker) | ✅ role-scoped docs | ❌ | ❌ |
+
+- **Invite → claim → active:** an admin creates a one-time invite (picks a
+  role), a worker claims it with a username + password, and is active
+  immediately. Accounts are PBKDF2-hashed; sessions are the same HMAC cookies.
+- **Scoped retrieval:** documents carry a `roles` tag (set from the admin
+  panel). `admin` sees everything; `staff`/`field` only retrieve documents
+  tagged to their role (or untagged, which are public). The hybrid RRF search
+  filters *before* ranking.
+- **First-run checklist:** a guided onboarding page walks new users through
+  "welcome → ask your first question → know who to contact".
+- The original bootstrap API key still works as the built-in admin, so existing
+  single-user installs upgrade in place.
+
+See [`docs/onboarding-rbac.md`](docs/onboarding-rbac.md) for the full design.
 
 ## Architecture
 
@@ -230,8 +264,8 @@ true PII — emails, phone numbers, national ID patterns, and credit cards
 (Luhn-validated so arbitrary numeric fields survive) — with type-specific
 markers. Every query, login, ingest, delete, and command appends a structured
 line to `audit.jsonl`. The blast radius is capped at "whoever is on this
-machine": no TLS, no multi-user RBAC, no rate limiting — a conscious scope
-limit for a single-user localhost or field-office deployment.
+machine": no TLS, no rate limiting, no SSO/LDAP federation — a conscious scope
+limit for a localhost or field-office deployment.
 
 **Why PROGRAM.md as the control plane?** Instead of scattering policy across
 flags, one markdown file at the repo root is the single source of truth:
@@ -240,14 +274,14 @@ Edit the file, restart, behavior changes. It's auditable by construction, has
 an explicit change log, and gets mounted read-only into the container so the
 governance story holds in Docker too.
 
-**What's deliberately not done.** No TLS, rate limiting, or multi-user RBAC
-(single-user localhost tool — the field-office install runs on a trusted
-machine). PII redaction is regex-based, not NER — deterministic and
-dependency-free, with deliberately conservative patterns so legitimate
-document content survives. The audit log is plain JSONL, not hash-chained. No
-retroactive redaction of already-stored chunks — re-ingest to scrub. The web
-UI is four static templates with vanilla JS: no build step, no CDN, no
-node_modules — consistent with the local-first, offline goal.
+**What's deliberately not done.** No TLS, rate limiting, or SSO/LDAP federation
+(the field-office install runs on a trusted machine). PII redaction is
+regex-based, not NER — deterministic and dependency-free, with deliberately
+conservative patterns so legitimate document content survives. The audit log is
+plain JSONL, not hash-chained. No retroactive redaction of already-stored
+chunks — re-ingest to scrub. The web UI is static templates with vanilla JS: no
+build step, no CDN, no node_modules — consistent with the local-first, offline
+goal.
 
 ## Files
 

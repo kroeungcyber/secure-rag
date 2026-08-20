@@ -21,7 +21,7 @@ embed: nomic-embed-text      # embedding model for vector search
 ```yaml
 ingest_paths:
   - /samples/
-  - /Users/bila/secure-rag/
+  - /Users/bila/Desktop/autoresearch/secure-rag/
 ```
 
 ## 3. URL Whitelist — Ingest
@@ -81,3 +81,4 @@ Edit below when you approve changes:
 | Date | What | Approved |
 |------|------|----------|
 | 2026-08-06 | CSO port: models llama3.2:3b / nomic-embed-text; ingest_paths restricted to /samples/ and the secure-rag repo; ingest_urls restricted to UN and MoEYS; commands OFF; top_k 5, trusted false | ✓ |
+| 2026-08-19 | Repo relocated to ~/Desktop/autoresearch/secure-rag; updated ingest_paths to the current path so `srag add samples/` works again | ✓ |

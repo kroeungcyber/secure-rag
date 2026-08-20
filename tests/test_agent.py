@@ -1,5 +1,7 @@
 # tests/test_agent.py
-from srag.agent.loop import run_agent, _format_chunk
+from srag.agent.loop import (
+    run_agent, _format_chunk, _web_result_is_real,
+)
 from srag.config import Config
 
 def _cfg(db_path):
@@ -315,3 +317,127 @@ def test_search_kb_top_k_absurd_clamped(mocker, db_path):
 
     list(run_agent("q", _cfg(db_path), confirm_fn=lambda cmd: False))
     assert mock_search.call_args[0][3] == 100  # clamped to max 100
+
+
+# ── Grounding guard ──────────────────────────────────────────────────
+
+def test_web_result_is_real():
+    assert _web_result_is_real("Summary: answer from web") is True
+    assert _web_result_is_real("[Web search unavailable: no Tavily API key configured.]") is False
+    assert _web_result_is_real("[No results found.]") is False
+    assert _web_result_is_real("[Web search error: timeout]") is False
+    assert _web_result_is_real("") is False
+
+
+def test_agent_guards_against_fabrication_when_kb_empty(mocker, db_path):
+    call_count = 0
+
+    def fake_chat(**kwargs):
+        nonlocal call_count
+        call_count += 1
+        if call_count == 1:
+            return {
+                "message": {
+                    "content": "",
+                    "tool_calls": [{"function": {"name": "search_kb", "arguments": {"query": "password policy"}}}],
+                }
+            }
+        return {
+            "message": {
+                "content": "The password policy requires 12 characters and changes every 60 days.",
+                "tool_calls": [],
+            }
+        }
+
+    mocker.patch("srag.agent.loop.ollama.chat", side_effect=fake_chat)
+    mocker.patch("srag.agent.loop.embed_query", return_value=[0.1] * 768)
+    mocker.patch("srag.agent.loop.search_kb", return_value=[])
+    mocker.patch("srag.agent.loop.web_search",
+                 return_value="[Web search unavailable: no Tavily API key configured.]")
+    mocker.patch("srag.agent.loop.suggest_followups", return_value=[])
+
+    full = "".join(list(run_agent("What is the password policy?", _cfg(db_path),
+                                  confirm_fn=lambda c: False)))
+    assert "I could not find this in the knowledge base" in full
+    assert "60 days" not in full
+
+
+def test_agent_guard_overrides_model_unknown_when_no_context(mocker, db_path):
+    call_count = 0
+
+    def fake_chat(**kwargs):
+        nonlocal call_count
+        call_count += 1
+        if call_count == 1:
+            return {
+                "message": {
+                    "content": "",
+                    "tool_calls": [{"function": {"name": "search_kb", "arguments": {"query": "q"}}}],
+                }
+            }
+        return {"message": {"content": "I don't know the answer to that.", "tool_calls": []}}
+
+    mocker.patch("srag.agent.loop.ollama.chat", side_effect=fake_chat)
+    mocker.patch("srag.agent.loop.embed_query", return_value=[0.1] * 768)
+    mocker.patch("srag.agent.loop.search_kb", return_value=[])
+    mocker.patch("srag.agent.loop.web_search",
+                 return_value="[Web search unavailable: no Tavily API key configured.]")
+    mocker.patch("srag.agent.loop.suggest_followups", return_value=[])
+
+    full = "".join(list(run_agent("q", _cfg(db_path), confirm_fn=lambda c: False)))
+    assert "I could not find this in the knowledge base" in full
+    assert "I don't know the answer" not in full
+
+
+def test_agent_guard_does_not_fire_with_kb_context(mocker, db_path):
+    call_count = 0
+
+    def fake_chat(**kwargs):
+        nonlocal call_count
+        call_count += 1
+        if call_count == 1:
+            return {
+                "message": {
+                    "content": "",
+                    "tool_calls": [{"function": {"name": "search_kb", "arguments": {"query": "breach"}}}],
+                }
+            }
+        return {"message": {"content": "Report the breach within 24 hours.", "tool_calls": []}}
+
+    chunk = {"id": 1, "content": "Report the breach within 24 hours.", "source": "docA", "metadata": {}}
+    mocker.patch("srag.agent.loop.ollama.chat", side_effect=fake_chat)
+    mocker.patch("srag.agent.loop.embed_query", return_value=[0.1] * 768)
+    mocker.patch("srag.agent.loop.search_kb", return_value=[chunk])
+    mocker.patch("srag.agent.loop.max_cosine_similarity", return_value=1.0)
+    mocker.patch("srag.agent.loop.suggest_followups", return_value=[])
+
+    full = "".join(list(run_agent("q", _cfg(db_path), confirm_fn=lambda c: False)))
+    assert "Report the breach within 24 hours" in full
+
+
+def test_agent_guard_fires_on_irrelevant_context(mocker, db_path):
+    call_count = 0
+
+    def fake_chat(**kwargs):
+        nonlocal call_count
+        call_count += 1
+        if call_count == 1:
+            return {
+                "message": {
+                    "content": "",
+                    "tool_calls": [{"function": {"name": "search_kb", "arguments": {"query": "password policy"}}}],
+                }
+            }
+        return {"message": {"content": "The password policy requires 12 characters.", "tool_calls": []}}
+
+    chunk = {"id": 1, "content": "Field visits have no internet.", "source": "docA", "metadata": {}}
+    mocker.patch("srag.agent.loop.ollama.chat", side_effect=fake_chat)
+    mocker.patch("srag.agent.loop.embed_query", return_value=[0.1] * 768)
+    mocker.patch("srag.agent.loop.search_kb", return_value=[chunk])
+    mocker.patch("srag.agent.loop.max_cosine_similarity", return_value=0.3)
+    mocker.patch("srag.agent.loop.suggest_followups", return_value=[])
+
+    full = "".join(list(run_agent("What is the password policy?", _cfg(db_path),
+                                  confirm_fn=lambda c: False)))
+    assert "I could not find this in the knowledge base" in full
+    assert "12 characters" not in full

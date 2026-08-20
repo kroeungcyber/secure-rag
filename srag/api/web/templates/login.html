@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sign in — srag</title>
+  <style>
+    :root {
+      --bg: #faf9f5; --surface: #ffffff; --border: #e6e1d3;
+      --accent: #c1653c; --accent-hover: #a8532f; --accent-tint: #f4e3d7;
+      --text: #2d2b26; --muted: #6b6659; --danger: #a83b32;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: var(--bg); color: var(--text); min-height: 100vh;
+      display: flex; align-items: center; justify-content: center; padding: 1.5rem;
+    }
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px;
+      width: 100%; max-width: 400px; padding: 2rem; box-shadow: 0 6px 24px rgba(45,43,38,.05); }
+    h1 { font-size: 1.3rem; letter-spacing: -.02em; margin-bottom: .25rem; }
+    .sub { color: var(--muted); font-size: .85rem; margin-bottom: 1.5rem; }
+    .tabs { display: flex; border-bottom: 1px solid var(--border); margin-bottom: 1.25rem; }
+    .tab { flex: 1; text-align: center; padding: .5rem; font-size: .85rem; cursor: pointer;
+      color: var(--muted); border: none; background: none; font-family: inherit; }
+    .tab.active { color: var(--accent-hover); font-weight: 600; box-shadow: inset 0 -2px 0 var(--accent); }
+    .panel { display: none; }
+    .panel.active { display: block; }
+    label { display: block; font-size: .8rem; color: var(--muted); margin: .75rem 0 .3rem; }
+    input { width: 100%; padding: .6rem .75rem; border: 1px solid var(--border); border-radius: 8px;
+      font-size: .95rem; font-family: inherit; color: var(--text); background: var(--bg); }
+    input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-tint); }
+    button.primary { width: 100%; margin-top: 1.25rem; padding: .65rem; border: none; border-radius: 8px;
+      background: var(--accent); color: #fff; font-size: .95rem; font-weight: 600; cursor: pointer; font-family: inherit; }
+    button.primary:hover { background: var(--accent-hover); }
+    .error { color: var(--danger); font-size: .82rem; margin-top: .75rem; min-height: 1em; }
+    .hint { color: var(--muted); font-size: .75rem; margin-top: .4rem; }
+    .back { display: block; margin-top: 1.25rem; text-align: center; font-size: .82rem; color: var(--muted); text-decoration: none; }
+    .back:hover { color: var(--accent-hover); }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>srag</h1>
+    <div class="sub">Local-first knowledge base for your organisation.</div>
+
+    <div class="tabs">
+      <button class="tab active" data-panel="signin">Sign in</button>
+      <button class="tab" data-panel="admin">Admin key</button>
+      <button class="tab" data-panel="claim">Claim invite</button>
+    </div>
+
+    <div class="panel active" id="panel-signin">
+      <label for="f-user">Username</label>
+      <input id="f-user" type="text" autocomplete="username" placeholder="your.name">
+      <label for="f-pass">Password</label>
+      <input id="f-pass" type="password" autocomplete="current-password" placeholder="••••••••">
+      <div class="error" id="err-signin"></div>
+      <button class="primary" id="btn-signin">Sign in</button>
+    </div>
+
+    <div class="panel" id="panel-admin">
+      <label for="f-key">API key</label>
+      <input id="f-key" type="password" placeholder="Paste the key printed when the server started">
+      <div class="hint">Admin access. The key is printed once at server startup.</div>
+      <div class="error" id="err-admin"></div>
+      <button class="primary" id="btn-admin">Continue as admin</button>
+    </div>
+
+    <div class="panel" id="panel-claim">
+      <label for="f-token">Invite token</label>
+      <input id="f-token" type="text" placeholder="Token from IT support">
+      <label for="f-new-user">Choose a username</label>
+      <input id="f-new-user" type="text" autocomplete="username" placeholder="letters, digits, . _ -">
+      <label for="f-new-pass">Choose a password (min 8 characters)</label>
+      <input id="f-new-pass" type="password" autocomplete="new-password" placeholder="••••••••">
+      <div class="error" id="err-claim"></div>
+      <button class="primary" id="btn-claim">Create my account</button>
+    </div>
+
+    <a class="back" href="/">← Back to chat</a>
+  </div>
+
+  <script>
+    "use strict";
+    var tabs = document.querySelectorAll(".tab");
+    var panels = { signin: document.getElementById("panel-signin"),
+                   admin: document.getElementById("panel-admin"),
+                   claim: document.getElementById("panel-claim") };
+    tabs.forEach(function (t) {
+      t.addEventListener("click", function () {
+        tabs.forEach(function (x) { x.classList.remove("active"); });
+        Object.keys(panels).forEach(function (k) { panels[k].classList.remove("active"); });
+        t.classList.add("active");
+        panels[t.dataset.panel].classList.add("active");
+      });
+    });
+
+    function post(url, body, errEl) {
+      errEl.textContent = "";
+      fetch(url, { method: "POST", headers: { "Content-Type": "application/json" },
+                   body: JSON.stringify(body) })
+        .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
+        .then(function (res) {
+          if (res.ok) {
+            var role = res.j.role || "admin";
+            location.href = (role === "admin") ? "/" : "/onboarding";
+          } else {
+            errEl.textContent = res.j.detail || "Request failed";
+          }
+        })
+        .catch(function () { errEl.textContent = "Request failed — is the server running?"; });
+    }
+
+    document.getElementById("btn-signin").addEventListener("click", function () {
+      post("/api/login", { username: document.getElementById("f-user").value.trim(),
+                           password: document.getElementById("f-pass").value },
+           document.getElementById("err-signin"));
+    });
+    document.getElementById("btn-admin").addEventListener("click", function () {
+      post("/api/login", { key: document.getElementById("f-key").value.trim() },
+           document.getElementById("err-admin"));
+    });
+    document.getElementById("btn-claim").addEventListener("click", function () {
+      post("/api/claim", { token: document.getElementById("f-token").value.trim(),
+                           username: document.getElementById("f-new-user").value.trim(),
+                           password: document.getElementById("f-new-pass").value },
+           document.getElementById("err-claim"));
+    });
+
+    ["f-pass", "f-new-pass", "f-key"].forEach(function (id) {
+      document.getElementById(id).addEventListener("keydown", function (e) {
+        if (e.key === "Enter") {
+          if (id === "f-pass") document.getElementById("btn-signin").click();
+          else if (id === "f-new-pass") document.getElementById("btn-claim").click();
+          else document.getElementById("btn-admin").click();
+        }
+      });
+    });
+  </script>
+</body>
+</html>

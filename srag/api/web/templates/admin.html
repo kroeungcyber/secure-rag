@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin — srag</title>
+  <style>
+    :root {
+      --bg: #faf9f5; --surface: #ffffff; --border: #e6e1d3;
+      --accent: #c1653c; --accent-hover: #a8532f; --accent-tint: #f4e3d7;
+      --text: #2d2b26; --muted: #6b6659; --danger: #a83b32;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: var(--bg); color: var(--text); min-height: 100vh; padding: 2rem; }
+    .wrap { max-width: 860px; margin: 0 auto; }
+    h1 { font-size: 1.3rem; letter-spacing: -.02em; margin-bottom: .25rem; }
+    .sub { color: var(--muted); font-size: .85rem; margin-bottom: 1.5rem; }
+    nav { display: flex; gap: 1rem; margin-bottom: 1.5rem; }
+    nav a { color: var(--muted); text-decoration: none; font-size: .85rem; }
+    nav a:hover { color: var(--accent-hover); }
+    section { background: var(--surface); border: 1px solid var(--border); border-radius: 14px;
+      padding: 1.25rem; margin-bottom: 1.25rem; }
+    h2 { font-size: 1rem; font-weight: 600; margin-bottom: 1rem; }
+    .row { display: flex; gap: .5rem; flex-wrap: wrap; align-items: center; }
+    select, input, button { font-family: inherit; font-size: .9rem; padding: .55rem .75rem;
+      border: 1px solid var(--border); border-radius: 8px; background: var(--bg); color: var(--text); }
+    select:focus, input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-tint); }
+    button.primary { background: var(--accent); color: #fff; border: none; cursor: pointer; font-weight: 600; }
+    button.primary:hover { background: var(--accent-hover); }
+    button.small { padding: .3rem .6rem; font-size: .8rem; cursor: pointer; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { text-align: left; padding: .55rem .6rem; border-bottom: 1px solid var(--border); font-size: .87rem; }
+    th { color: var(--muted); font-weight: 500; }
+    .badge { padding: .15rem .55rem; border-radius: 999px; font-size: .75rem; background: var(--accent-tint); color: var(--accent-hover); }
+    .badge.disabled { background: #eee; color: var(--muted); }
+    .token { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: .8rem; word-break: break-all; }
+    .muted { color: var(--muted); font-size: .82rem; }
+    .msg { font-size: .82rem; min-height: 1.2em; margin-top: .6rem; }
+    .err { color: var(--danger); }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>srag — Admin</h1>
+    <div class="sub">Users, invites, and document access.</div>
+    <nav>
+      <a href="/">Chat</a>
+      <a href="/docs-ui">Documents</a>
+      <a href="/history">History</a>
+      <a href="/notes">Notes</a>
+    </nav>
+
+    <section>
+      <h2>Invite a new user</h2>
+      <div class="row">
+        <select id="invite-role">
+          <option value="staff">staff — team member</option>
+          <option value="field">field — field / patient worker</option>
+          <option value="admin">admin — IT support</option>
+        </select>
+        <button class="primary" id="btn-invite">Create invite</button>
+      </div>
+      <div class="msg" id="invite-msg"></div>
+    </section>
+
+    <section>
+      <h2>Pending invites</h2>
+      <div id="invites">Loading…</div>
+    </section>
+
+    <section>
+      <h2>Users</h2>
+      <div id="users">Loading…</div>
+    </section>
+
+    <section>
+      <h2>Document access</h2>
+      <div class="muted">Control which roles can retrieve each document. "Public" = every role sees it.</div>
+      <div id="docs" style="margin-top:.5rem">Loading…</div>
+    </section>
+  </div>
+
+  <script>
+    "use strict";
+    function jfetch(url, opts) {
+      return fetch(url, opts).then(function (r) {
+        if (r.status === 401) { location.href = "/login"; throw new Error("unauthorized"); }
+        return r.json().then(function (j) { return { ok: r.ok, j: j }; });
+      });
+    }
+
+    function loadInvites() {
+      jfetch("/api/invites").then(function (res) {
+        var el = document.getElementById("invites");
+        if (!res.j.length) { el.innerHTML = '<div class="muted">No pending invites.</div>'; return; }
+        var html = '<table><tr><th>Role</th><th>Token</th><th>Expires</th><th>Claimed by</th></tr>';
+        res.j.forEach(function (i) {
+          html += '<tr><td><span class="badge">' + i.role + '</span></td>' +
+                  '<td class="token">' + i.token + '</td>' +
+                  '<td class="muted">' + (i.expires_at || "").slice(0, 19) + '</td>' +
+                  '<td>' + (i.claimed_by || '<span class="muted">—</span>') + '</td></tr>';
+        });
+        html += '</table>';
+        el.innerHTML = html;
+      });
+    }
+
+    function loadUsers() {
+      jfetch("/api/users").then(function (res) {
+        var el = document.getElementById("users");
+        if (!res.j.length) { el.innerHTML = '<div class="muted">No users yet — invite someone above.</div>'; return; }
+        var html = '<table><tr><th>Username</th><th>Role</th><th>Status</th><th>Last login</th></tr>';
+        res.j.forEach(function (u) {
+          html += '<tr><td>' + u.username + '</td>' +
+                  '<td><span class="badge">' + u.role + '</span></td>' +
+                  '<td>' + (u.status === 'active'
+                      ? '<span class="badge">active</span>'
+                      : '<span class="badge disabled">disabled</span>') + '</td>' +
+                  '<td class="muted">' + (u.last_login ? u.last_login.slice(0, 19) : '—') + '</td></tr>';
+        });
+        html += '</table>';
+        el.innerHTML = html;
+      });
+    }
+
+    var ROLE_OPTIONS = [
+      { value: "public", label: "Public (all roles)", roles: [] },
+      { value: "staff", label: "Staff only", roles: ["staff"] },
+      { value: "field", label: "Field only", roles: ["field"] },
+      { value: "staff_field", label: "Staff & field", roles: ["staff", "field"] },
+      { value: "admin", label: "Admin only", roles: ["admin"] },
+    ];
+
+    function rolesToOption(roles) {
+      if (!roles) return "public";
+      var tags = roles.split(",").map(function (s) { return s.trim(); }).filter(Boolean);
+      if (tags.length === 0) return "public";
+      if (tags.length === 1) {
+        if (tags[0] === "admin" || tags[0] === "staff" || tags[0] === "field") return tags[0];
+      }
+      if (tags.indexOf("staff") !== -1 && tags.indexOf("field") !== -1 && tags.length === 2) {
+        return "staff_field";
+      }
+      return null; // non-canonical — show raw below
+    }
+
+    function loadDocs() {
+      jfetch("/api/documents").then(function (res) {
+        var el = document.getElementById("docs");
+        if (!res.j.length) { el.innerHTML = '<div class="muted">No documents ingested yet.</div>'; return; }
+        var html = '<table><tr><th>Document</th><th>Access</th></tr>';
+        res.j.forEach(function (d) {
+          var current = rolesToOption(d.roles);
+          html += '<tr><td>' + (d.title || d.source_path) + '<br><span class="muted">' + d.id + '</span></td>' +
+                  '<td>' + (current === null
+                    ? '<span class="muted">custom: ' + (d.roles || "public") + '</span>'
+                    : '<select data-doc="' + d.id + '">' + ROLE_OPTIONS.map(function (o) {
+                        return '<option value="' + o.value + '"' + (o.value === current ? " selected" : "") + '>' + o.label + '</option>';
+                      }).join("") + '</select>') + '</td></tr>';
+        });
+        html += '</table>';
+        el.innerHTML = html;
+        el.querySelectorAll("select").forEach(function (sel) {
+          sel.addEventListener("change", function () {
+            var opt = ROLE_OPTIONS.find(function (o) { return o.value === sel.value; });
+            jfetch("/api/documents/" + sel.dataset.doc + "/roles", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ roles: opt.roles }),
+            }).then(function () { loadDocs(); });
+          });
+        });
+      });
+    }
+
+    document.getElementById("btn-invite").addEventListener("click", function () {
+      var role = document.getElementById("invite-role").value;
+      jfetch("/api/invites", { method: "POST", headers: { "Content-Type": "application/json" },
+                               body: JSON.stringify({ role: role }) }).then(function (res) {
+        var msg = document.getElementById("invite-msg");
+        if (res.ok) {
+          msg.textContent = "Invite created. Share this token: " + res.j.token;
+          msg.className = "msg";
+          loadInvites();
+        } else {
+          msg.textContent = res.j.detail || "Failed";
+          msg.className = "msg err";
+        }
+      });
+    });
+
+    loadInvites();
+    loadUsers();
+    loadDocs();
+  </script>
+</body>
+</html>
