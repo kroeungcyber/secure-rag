@@ -5,7 +5,7 @@ import hashlib
 import hmac
 import secrets
 from datetime import datetime, timedelta, timezone
-from typing import Optional
+from typing import NoReturn, Optional
 
 from fastapi import Header, HTTPException, Request
 
@@ -143,7 +143,7 @@ def get_current_user(request: Request, x_api_key: str = Header(default="")) -> O
             return {"id": "bootstrap", "username": "admin", "role": "admin"}
         return None
 
-    claims = resolve_session(request.cookies.get("srag_session"), cfg.session_secret, cfg.api_key)
+    claims = resolve_session(request.cookies.get("srag_session") or "", cfg.session_secret, cfg.api_key)
     if claims is None:
         return None
     if claims["user_id"] == "bootstrap":
@@ -175,7 +175,7 @@ def require_role(*roles: str):
     return dependency
 
 
-def _reject():
+def _reject() -> NoReturn:
     raise HTTPException(
         status_code=401,
         detail="Invalid API key or session",

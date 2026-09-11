@@ -183,6 +183,7 @@ def api_login(req: LoginRequest, response: Response):
         log_event(cfg.db_path, "auth.login", success=ok, user=req.username)
         if not ok:
             raise HTTPException(status_code=401, detail="Invalid username or password")
+        assert user is not None  # ok=True implies a user was found and verified
         record_login(cfg.db_path, user.id)
         token = make_user_session_token(user.id, user.role, cfg.session_secret)
         response.set_cookie(
@@ -191,7 +192,7 @@ def api_login(req: LoginRequest, response: Response):
         )
         return {"status": "ok", "role": user.role, "username": user.username}
 
-    ok = bool(cfg.api_key) and bool(req.key) and secrets.compare_digest(req.key, cfg.api_key)
+    ok = bool(cfg.api_key) and bool(req.key) and secrets.compare_digest(req.key or "", cfg.api_key)
     log_event(cfg.db_path, "auth.login", success=ok)
     if not ok:
         raise HTTPException(status_code=401, detail="Invalid API key")
