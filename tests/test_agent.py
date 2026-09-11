@@ -10,19 +10,21 @@ def _cfg(db_path):
     cfg.trusted = False
     return cfg
 
-def test_agent_returns_answer_when_no_tool_calls(mocker, db_path):
-    mock_chat = mocker.patch("srag.agent.loop.ollama.chat")
-    mock_chat.return_value = {
-        "message": {
-            "content": "Restart nginx with: sudo systemctl restart nginx",
-            "tool_calls": [],
-        }
-    }
-    mocker.patch("srag.agent.loop.suggest_followups", return_value=["Q1?", "Q2?", "Q3?"])
+def test_agent_forces_search_when_model_answers_without_searching(mocker, db_path):
+    responses = iter([
+        {"message": {"content": "Restart nginx with: sudo systemctl restart nginx", "tool_calls": []}},
+        {"message": {"content": "Restart nginx with: sudo systemctl restart nginx", "tool_calls": []}},
+    ])
+    mocker.patch("srag.agent.loop.ollama.chat", side_effect=lambda **kwargs: next(responses))
+    chunk = {"id": 1, "content": "nginx restart command", "source": "docA", "metadata": {}}
+    mock_search = mocker.patch("srag.agent.loop.search_kb", return_value=[chunk])
+    mocker.patch("srag.agent.loop.embed_query", return_value=[0.1] * 768)
+    mocker.patch("srag.agent.loop.max_cosine_similarity", return_value=1.0)
+    mocker.patch("srag.agent.loop.suggest_followups", return_value=[])
 
-    tokens = list(run_agent("how do I restart nginx?", _cfg(db_path),
-                             confirm_fn=lambda cmd: False))
-    full = "".join(tokens)
+    full = "".join(list(run_agent("how do I restart nginx?", _cfg(db_path),
+                                   confirm_fn=lambda cmd: False)))
+    assert mock_search.called  # search is forced even though the model emitted no tool call
     assert "nginx" in full.lower()
 
 def test_agent_calls_search_kb_tool(mocker, db_path):

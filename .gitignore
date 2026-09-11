@@ -11,3 +11,7 @@ dist/
 .gstack/
 
 build/
+
+# eval harness generated artifacts
+eval/results/
+eval/.eval-data/

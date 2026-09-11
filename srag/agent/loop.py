@@ -92,6 +92,17 @@ def run_agent(
         messages.append(msg)
         tool_calls = msg.get("tool_calls") or []
 
+        # Enforce rule 1 deterministically: if the model produced a final
+        # answer without ever searching the KB, force a search with the
+        # original question instead of accepting a groundless answer.
+        if not tool_calls and not searched:
+            tool_calls = [{
+                "function": {
+                    "name": "search_kb",
+                    "arguments": json.dumps({"query": question, "top_k": cfg.top_k}),
+                }
+            }]
+
         if not tool_calls:
             answer = msg["content"]
             # Grounding guard: the KB was searched and nothing *relevant* was
@@ -133,6 +144,17 @@ def run_agent(
                     )
                     if sim >= RELEVANCE_THRESHOLD:
                         relevant_context_found = True
+                    else:
+                        # The model may have reformulated the query poorly.
+                        # The chunks are still relevant if they relate to the
+                        # user's ORIGINAL question — grounding is about the
+                        # user's intent, not the model's paraphrase.
+                        q0_emb = embed_query(question, cfg.embed_model)
+                        sim0 = max_cosine_similarity(
+                            cfg.db_path, q0_emb, [c["id"] for c in chunks]
+                        )
+                        if sim0 >= RELEVANCE_THRESHOLD:
+                            relevant_context_found = True
                 if collected_chunks is not None:
                     collected_chunks.extend(str(c["id"]) for c in chunks)
                 tool_result = "\n\n".join(
